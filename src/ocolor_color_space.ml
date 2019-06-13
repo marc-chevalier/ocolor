@@ -70,10 +70,10 @@ let palettes4 : (rgb*lab) Color4Map.t ColorPaletteMap.t =
     ]
 
 let palette4 () : (rgb * lab) Color4Map.t =
-  match Ocolor_config.get_palette () with
+  ((match Ocolor_config.get_palette () with
   | Custom_palette p -> Color4Map.map rgb_and_lab_of_rgb p
-  | palette -> ColorPaletteMap.find palette palettes4
-[@@warning "-4"]
+  | palette -> ColorPaletteMap.find palette palettes4)
+[@warning "-4"])
 
 let standard_palette8 : (rgb * lab) Color8Map.t =
   let p : (rgb * lab) Color8Map.t = Color8Map.empty in
@@ -111,31 +111,33 @@ let palettes8 : (rgb * lab) Color8Map.t ColorPaletteMap.t =
     ColorPaletteMap.empty
 
 let palette8 () : (rgb * lab) Color8Map.t =
-  match Ocolor_config.get_palette () with
+((match Ocolor_config.get_palette () with
   | Custom_palette p -> p |> Color4Map.map rgb_and_lab_of_rgb |> palette8_of_palette4
-  | palette -> ColorPaletteMap.find palette palettes8
-[@@warning "-4"]
+  | palette -> ColorPaletteMap.find palette palettes8)
+[@warning "-4"])
 
 let closest_color4 (map: (rgb * lab) Color4Map.t) (c: rgb) : color4 * rgb * lab * float =
-  match Color4Map.choose_opt map with
-  | None -> failwith (Printf.sprintf "%s: empty palette" __LOC__)
-  | Some (c4, (rgb, lab)) ->
-    let c = lab_of_rgb c in
-    let d = lab_distance lab c in
-    let c4, rgb, lab, distance =
-      Color4Map.fold
-        (
-          fun a (rgb, b) (min, rgb', argmin, d) ->
-            let d1 = lab_distance b c in
-            if d1 < d then
-              (a, rgb, b, d1)
-            else
-              (min, rgb', argmin, d)
-        )
-        map
-        (c4, rgb, lab, d)
-    in
-    c4, rgb, lab, distance
+  let (c4, (rgb, lab)) =
+    try
+      Color4Map.choose map
+    with Not_found -> failwith (Printf.sprintf "%s: empty palette" __LOC__)
+  in
+  let c = lab_of_rgb c in
+  let d = lab_distance lab c in
+  let c4, rgb, lab, distance =
+    Color4Map.fold
+      (
+        fun a (rgb, b) (min, rgb', argmin, d) ->
+          let d1 = lab_distance b c in
+          if d1 < d then
+            (a, rgb, b, d1)
+          else
+            (min, rgb', argmin, d)
+      )
+      map
+      (c4, rgb, lab, d)
+  in
+  c4, rgb, lab, distance
 
 let closest_color4 (c: rgb) : color4 =
   let c, _, _, _ = closest_color4 (palette4 ()) c in
@@ -143,26 +145,27 @@ let closest_color4 (c: rgb) : color4 =
 
 
 let closest_color8 (map: (rgb * lab) Color8Map.t) (c: rgb) : color8 * rgb * lab =
-  match Color8Map.choose_opt map with
-  | None -> failwith (Printf.sprintf "%s: empty palette" __LOC__)
-  | Some (a, (rgb, b)) ->
-    let c = lab_of_rgb c in
-    let d = lab_distance b c in
-    let a, rgb, b, _ =
-      Color8Map.fold
-        (
-          fun a (rgb, b) (min, rgb', argmin, d) ->
-            let d1 = lab_distance b c in
-            if d1 < d then
-              (a, rgb, b, d1)
-            else
-              (min, rgb', argmin, d)
-
-        )
-        map
-        (a, rgb, b, d)
-    in
-    a, rgb, b
+  let (a, (rgb, b)) =
+    try
+      Color8Map.choose map
+    with Not_found -> failwith (Printf.sprintf "%s: empty palette" __LOC__)
+  in
+  let c = lab_of_rgb c in
+  let d = lab_distance b c in
+  let a, rgb, b, _ =
+    Color8Map.fold
+      (
+        fun a (rgb, b) (min, rgb', argmin, d) ->
+          let d1 = lab_distance b c in
+          if d1 < d then
+            (a, rgb, b, d1)
+          else
+            (min, rgb', argmin, d)
+      )
+      map
+      (a, rgb, b, d)
+  in
+  a, rgb, b
 
 let closest_color8 (c: rgb) : color8 =
   let c, _, _ = closest_color8 (palette8 ()) c in

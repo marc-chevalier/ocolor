@@ -5,8 +5,9 @@ synopsis: "Print with style in your terminal using Format's semantic tags"
 maintainer: "Marc Chevalier <ocolor@marc-chevalier.com>"
 authors: "Marc Chevalier <ocolor@marc-chevalier.com>"
 depends: [
-  "ocaml" {>= "4.05.0"}
+  "ocaml" {>= "4.02.3"}
   "dune" {build & >= "1.6.3"}
+  "cppo" {build & >= "1.6.5"}
 ]
 build: [
   ["dune" "subst"] {pinned}

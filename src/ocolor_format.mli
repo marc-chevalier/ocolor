@@ -257,6 +257,11 @@ val get_current_bg_color: formatter -> Ocolor_types.color option
 
 (** {2 Pretty printers} *)
 
+#if OCAML_VERSION >= (4, 08, 0)
+type Format.stag += Ocolor_styles_tag of Ocolor_types.style list
+type Format.stag += Ocolor_style_tag of Ocolor_types.style
+#endif
+
 (** Open a semantic tag with the string corresponding to the fiven style list. *)
 val pp_open_styles: Format.formatter -> Ocolor_types.style list -> unit
 

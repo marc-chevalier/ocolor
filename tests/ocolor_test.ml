@@ -1,2 +1,3 @@
 let () =
-  Test.test ()
+  Test.test ();
+  Test.list_all_colors ()

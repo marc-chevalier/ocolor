@@ -165,7 +165,7 @@ let pp_pair_generic
     ?(delim_style: Ocolor_types.style list=Ocolor_types.[Faint])
     ?(sep_style: Ocolor_types.style list=Ocolor_types.[Faint])
     ?(elem_style: Ocolor_types.style list=[])
-    (type a b)
+    (type a) (type b)
     (f: out_channel -> a -> unit)
     (g: out_channel -> b -> unit)
     (oc: out_channel)
@@ -186,7 +186,7 @@ let pp_pair_generic
   Printf.fprintf oc "%t%a%t%a%t" l_delim (elem f) a sep (elem g) b r_delim
 
 let pp_pair
-    (type a b)
+    (type a) (type b)
     (f: out_channel -> a -> unit)
     (g: out_channel -> b -> unit)
     (oc: out_channel)
@@ -199,7 +199,7 @@ let pp_3_tuple_generic
     ?(delim_style: Ocolor_types.style list=Ocolor_types.[Faint])
     ?(sep_style: Ocolor_types.style list=Ocolor_types.[Faint])
     ?(elem_style: Ocolor_types.style list=[])
-    (type a b c)
+    (type a) (type b) (type c)
     (f: out_channel -> a -> unit)
     (g: out_channel -> b -> unit)
     (h: out_channel -> c -> unit)
@@ -221,7 +221,7 @@ let pp_3_tuple_generic
   Printf.fprintf oc "%t%a%t%a%t%a%t"
     l_delim (elem f) a sep (elem g) b sep (elem h) c r_delim
 
-let pp_3_tuple (type a b c)
+let pp_3_tuple (type a) (type b) (type c)
     (f: out_channel -> a -> unit)
     (g: out_channel -> b -> unit)
     (h: out_channel -> c -> unit)
@@ -235,7 +235,7 @@ let pp_4_tuple_generic
     ?(delim_style: Ocolor_types.style list=Ocolor_types.[Faint])
     ?(sep_style: Ocolor_types.style list=Ocolor_types.[Faint])
     ?(elem_style: Ocolor_types.style list=[])
-    (type a b c d)
+    (type a) (type b) (type c) (type d)
     (f: out_channel -> a -> unit)
     (g: out_channel -> b -> unit)
     (h: out_channel -> c -> unit)
@@ -261,7 +261,7 @@ let pp_4_tuple_generic
   Printf.fprintf oc "%t%a%t%a%t%a%t%a%t"
     l_delim (elem f) a sep (elem g) b sep (elem h) c sep (elem i) d r_delim
 
-let pp_4_tuple (type a b c d)
+let pp_4_tuple (type a) (type b) (type c) (type d)
     (f: out_channel -> a -> unit)
     (g: out_channel -> b -> unit)
     (h: out_channel -> c -> unit)
@@ -276,7 +276,7 @@ let pp_5_tuple_generic
     ?(delim_style: Ocolor_types.style list=Ocolor_types.[Faint])
     ?(sep_style: Ocolor_types.style list=Ocolor_types.[Faint])
     ?(elem_style: Ocolor_types.style list=[])
-    (type a b c d e)
+    (type a) (type b) (type c) (type d) (type e)
     (f: out_channel -> a -> unit)
     (g: out_channel -> b -> unit)
     (h: out_channel -> c -> unit)
@@ -303,7 +303,7 @@ let pp_5_tuple_generic
   Printf.fprintf oc "%t%a%t%a%t%a%t%a%t%a%t"
     l_delim (elem f) a sep (elem g) b sep (elem h) c sep (elem i) d sep (elem j) e r_delim
 
-let pp_5_tuple (type a b c d e)
+let pp_5_tuple (type a) (type b) (type c) (type d) (type e)
     (f: out_channel -> a -> unit)
     (g: out_channel -> b -> unit)
     (h: out_channel -> c -> unit)

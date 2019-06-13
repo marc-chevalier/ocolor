@@ -767,7 +767,9 @@ let color_of_string_map : rgb StringMap.t =
     available_colors
 
 let color_of_string (s: string) : rgb option =
-  StringMap.find_opt s color_of_string_map
+  try
+    Some (StringMap.find s color_of_string_map)
+  with Not_found -> None
 
 let string_of_color_map : string RGBMap.t =
   List.fold_left
@@ -776,4 +778,7 @@ let string_of_color_map : string RGBMap.t =
     available_colors
 
 let string_of_color (c: rgb) : string option =
-  RGBMap.find_opt c string_of_color_map
+  try
+    Some (RGBMap.find c string_of_color_map)
+  with Not_found -> None
+

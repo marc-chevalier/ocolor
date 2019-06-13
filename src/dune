@@ -3,4 +3,5 @@
     (wrapped false)
     (public_name ocolor)
     (flags (:standard -w @A))
+    (preprocess (action (run %{bin:cppo} -V OCAML:%{ocaml_version} %{input-file})))
 )

@@ -1,3 +1,8 @@
+#if OCAML_VERSION >= (4, 08, 0)
+type Format.stag += Ocolor_styles_tag of Ocolor_types.style list
+type Format.stag += Ocolor_style_tag of Ocolor_types.style
+#endif
+
 type seq = Ocolor_sgr.seq
 
 (* What to do to enable or disable the style. *)
@@ -17,6 +22,7 @@ module type STACK =
     val current_style: t -> Ocolor_types.style option
 
     val analyze: string -> elem option
+    val analyze_style: Ocolor_types.style -> elem option
   end)
 
 module type STACK_PARAMETERS =
@@ -26,6 +32,7 @@ module type STACK_PARAMETERS =
     val seq_of_elem: elem -> seq
     val style_of_elem: elem -> Ocolor_types.style
     val analyze: string -> elem option
+    val analyze_style: Ocolor_types.style -> elem option
   end)
 
 (* Signal when poping from an empty stack. Should never be raised since
@@ -59,6 +66,7 @@ module MakeStack(P: STACK_PARAMETERS) : STACK with type elem = P.elem =
       | t::_ -> Some (P.style_of_elem t)
 
     let analyze (s: string) : elem option = P.analyze s
+    let analyze_style (style: Ocolor_types.style) : elem option = P.analyze_style style
   end)
 
 
@@ -110,6 +118,12 @@ module MakeCounter(P: COUNTER_PARAMETERS) : STACK with type elem = unit =
         Some ()
       else
         None
+
+    let analyze_style (style: Ocolor_types.style) : elem option =
+      if style = P.style then
+        Some ()
+      else
+        None
   end)
 
 let color_of_string (s: string) : Ocolor_types.color option =
@@ -155,10 +169,22 @@ let analyze_fg (s: string) : Ocolor_types.color option =
         Scanf.sscanf s "rgb(0x%x,0x%x,0x%x)" (fun r24 g24 b24 -> Some Ocolor_types.(C24 {r24;g24;b24}))
       with Scanf.Scan_failure _ | End_of_file | Failure _ | Invalid_argument _ -> None
 
+let analyze_style_fg (style: Ocolor_types.style) : Ocolor_types.color option =
+  (match style with
+  | Ocolor_types.Fg c -> Some c
+  | _ -> None)
+  [@warning "-4"]
+
 let analyze_bg (s: string) : Ocolor_types.color option =
   try
     Scanf.sscanf s "bg_%s" (fun c -> analyze_fg c)
   with Scanf.Scan_failure _ | End_of_file | Failure _ | Invalid_argument _ -> None
+
+let analyze_style_bg (style: Ocolor_types.style) : Ocolor_types.color option =
+  (match style with
+  | Ocolor_types.Bg c -> Some c
+  | _ -> None)
+  [@warning "-4"]
 
 let analyze_underlined (s: string) : bool option =
   match s with
@@ -170,15 +196,28 @@ let analyze_underlined (s: string) : bool option =
   | "doubleunderlined" -> Some true
   | _ -> None
 
+let analyze_style_underlined (style: Ocolor_types.style) : bool option =
+  (match style with
+  | Ocolor_types.Underlined -> Some false
+  | Ocolor_types.DoubleUnderlined -> Some true
+  | _ -> None)
+  [@warning "-4"]
+
 let analyze_font (s: string) : int option =
   try
     Scanf.sscanf s "font(%d)" (fun i -> Some i)
   with Scanf.Scan_failure _ | End_of_file | Failure _ | Invalid_argument _ -> None
 
-module Fg_color_stack = MakeStack (struct type elem = Ocolor_types.color let reset = Ocolor_sgr.default_fg_seq let seq_of_elem = Ocolor_sgr.fg_color_seq let analyze = analyze_fg let style_of_elem c = Ocolor_types.Fg c end)
-module Bg_color_stack = MakeStack (struct type elem = Ocolor_types.color let reset = Ocolor_sgr.default_bg_seq let seq_of_elem = Ocolor_sgr.bg_color_seq let analyze = analyze_bg let style_of_elem c = Ocolor_types.Bg c end)
-module Font_stack = MakeStack (struct type elem = int let reset = Ocolor_sgr.default_font_seq let seq_of_elem = Ocolor_sgr.font_seq let analyze = analyze_font let style_of_elem i = Ocolor_types.Font i end)
-module Underlined_stack = MakeStack(struct type elem = bool let reset = Ocolor_sgr.underlined_off_seq let seq_of_elem b = if b then Ocolor_sgr.double_underlined_seq else Ocolor_sgr.underlined_seq let analyze = analyze_underlined let style_of_elem b = if b then Ocolor_types.DoubleUnderlined else Ocolor_types.Underlined end)
+let analyze_style_font (style: Ocolor_types.style) : int option =
+  (match style with
+  | Ocolor_types.Font i -> Some i
+  | _ -> None)
+  [@warning "-4"]
+
+module Fg_color_stack = MakeStack (struct type elem = Ocolor_types.color let reset = Ocolor_sgr.default_fg_seq let seq_of_elem = Ocolor_sgr.fg_color_seq let analyze = analyze_fg let analyze_style = analyze_style_fg let style_of_elem c = Ocolor_types.Fg c end)
+module Bg_color_stack = MakeStack (struct type elem = Ocolor_types.color let reset = Ocolor_sgr.default_bg_seq let seq_of_elem = Ocolor_sgr.bg_color_seq let analyze = analyze_bg let analyze_style = analyze_style_bg let style_of_elem c = Ocolor_types.Bg c end)
+module Font_stack = MakeStack (struct type elem = int let reset = Ocolor_sgr.default_font_seq let seq_of_elem = Ocolor_sgr.font_seq let analyze = analyze_font let analyze_style = analyze_style_font let style_of_elem i = Ocolor_types.Font i end)
+module Underlined_stack = MakeStack(struct type elem = bool let reset = Ocolor_sgr.underlined_off_seq let seq_of_elem b = if b then Ocolor_sgr.double_underlined_seq else Ocolor_sgr.underlined_seq let analyze = analyze_underlined let analyze_style = analyze_style_underlined let style_of_elem b = if b then Ocolor_types.DoubleUnderlined else Ocolor_types.Underlined end)
 
 module Bold_counter = MakeCounter(struct let style = Ocolor_types.Bold let reset = None let kw = ["b"; "bold"] end)
 module Faint_counter = MakeCounter(struct let style = Ocolor_types.Faint let reset = None let kw = ["faint"] end)
@@ -235,18 +274,63 @@ let current_state (fmt: formatter) : seq =
   fmt |> current_styles |> Ocolor_sgr.seq_of_styles
 
 let get_current_fg_color (fmt: formatter) : Ocolor_types.color option =
+#if OCAML_VERSION >= (4, 04, 0)
   let exception Found of Ocolor_types.color in
   try
     let () = List.iter ((function Ocolor_types.Fg c -> raise (Found c) | _ -> () )[@warning "-4"]) (current_styles fmt) in
     None
   with Found c -> Some c
+#else
+  List.fold_left
+  (fun acc style ->
+      match acc with
+      | Some _ -> acc
+      | None ->
+        (match style with
+        | Ocolor_types.Fg c -> Some c
+        | _ -> None)
+        [@warning "-4"]
+  )
+  None
+  (current_styles fmt)
+#endif
 
 let get_current_bg_color (fmt: formatter) : Ocolor_types.color option =
+#if OCAML_VERSION >= (4, 04, 0)
   let exception Found of Ocolor_types.color in
   try
     let () = List.iter ((function Ocolor_types.Bg c -> raise (Found c) | _ -> () )[@warning "-4"]) (current_styles fmt) in
     None
   with Found c -> Some c
+#else
+  List.fold_left
+  (fun acc style ->
+      match acc with
+      | Some _ -> acc
+      | None ->
+        (match style with
+        | Ocolor_types.Bg c -> Some c
+        | _ -> None)
+        [@warning "-4"]
+  )
+  None
+  (current_styles fmt)
+#endif
+
+#if OCAML_VERSION < (4, 04, 0)
+let split_on_char sep s =
+  let r = ref [] in
+  let j = ref (String.length s) in
+  for i = String.length s - 1 downto 0 do
+    if String.get s i = sep then begin
+      r := String.sub s (i + 1) (!j - i - 1) :: !r;
+      j := i
+    end
+  done;
+  String.sub s 0 !j :: !r
+#else
+  let split_on_char = String.split_on_char
+#endif
 
 let mark_open_tag (fmt: formatter) (tag: Format.tag) : string =
   let mark_open_tag (tag: Format.tag) : string =
@@ -268,7 +352,7 @@ let mark_open_tag (fmt: formatter) (tag: Format.tag) : string =
     | ResetAndApply -> Ocolor_sgr.reset_seq @ current_state fmt |> Ocolor_sgr.sgr_of_seq
     | NothingToDo -> ""
   in
-  let tags = String.split_on_char ';' tag in
+  let tags = split_on_char ';' tag in
   String.concat "" (List.map mark_open_tag tags)
 
 let mark_close_tag (fmt: formatter) (tag: Format.tag) : string =
@@ -291,16 +375,80 @@ let mark_close_tag (fmt: formatter) (tag: Format.tag) : string =
     | ResetAndApply -> (Ocolor_sgr.reset_seq) @ (current_state fmt) |> Ocolor_sgr.sgr_of_seq
     | NothingToDo -> ""
   in
-  let tags = String.split_on_char ';' tag in
+  let tags = split_on_char ';' tag in
   String.concat "" (List.map mark_close_tag tags)
 
+#if OCAML_VERSION >= (4, 08, 0)
+let mark_open_stag (fmt: formatter) (stag: Format.stag) : string =
+  let open_style (tag: Ocolor_types.style) : string =
+    let rec aux (l: handled_stack list) : action * handled_stack list =
+      match l with
+      | [] -> NothingToDo, []
+      | Opaque_stack(m, s)::q ->
+        let module M = (val m) in
+        match M.analyze_style tag with
+        | None -> let sgr, l = aux q in sgr, Opaque_stack(m, s)::l
+        | Some elem ->
+          let s, sgr = M.push elem s in
+          sgr, Opaque_stack(m, s)::q
+    in
+    let seq, new_stacks = aux fmt.stacks in
+    let () = fmt.stacks <- new_stacks in
+    match seq with
+    | Do seq -> Ocolor_sgr.sgr_of_seq seq
+    | ResetAndApply -> Ocolor_sgr.reset_seq @ current_state fmt |> Ocolor_sgr.sgr_of_seq
+    | NothingToDo -> ""
+  in
+  match stag with
+  | Format.String_tag tag -> mark_open_tag fmt tag
+  | Ocolor_styles_tag styles -> String.concat "" (List.map open_style styles)
+  | Ocolor_style_tag style -> open_style style
+  | _ -> ""
+
+let mark_close_stag (fmt: formatter) (stag: Format.stag) : string =
+  let close_style (tag: Ocolor_types.style) : string =
+    let rec aux (l: handled_stack list) : action * handled_stack list =
+      match l with
+      | [] -> NothingToDo, []
+      | Opaque_stack(m, s)::q ->
+        let module M = (val m) in
+        match M.analyze_style tag with
+        | None -> let sgr, l = aux q in sgr, Opaque_stack(m, s)::l
+        | Some _ ->
+          let s, sgr = M.pop s in
+          sgr, Opaque_stack(m, s)::q
+    in
+    let seq, new_stacks = aux fmt.stacks in
+    let () = fmt.stacks <- new_stacks in
+    match seq with
+    | Do seq -> Ocolor_sgr.sgr_of_seq seq
+    | ResetAndApply -> (Ocolor_sgr.reset_seq) @ (current_state fmt) |> Ocolor_sgr.sgr_of_seq
+    | NothingToDo -> ""
+  in
+  match stag with
+  | Format.String_tag tag -> mark_close_tag fmt tag
+  | Ocolor_styles_tag styles -> String.concat "" (List.map close_style styles)
+  | Ocolor_style_tag style -> close_style style
+  | _ -> ""
+#endif
+
 let make_formatter (fmt: Format.formatter) : formatter =
-  let Format.{print_open_tag; print_close_tag; _} = Format.pp_get_formatter_tag_functions fmt () in
+#if OCAML_VERSION < (4, 08, 0)
+  let {Format.print_open_tag; print_close_tag; _} = Format.pp_get_formatter_tag_functions fmt () in
+#else
+  let Format.{print_open_stag; print_close_stag; _} = Format.pp_get_formatter_stag_functions fmt () in
+#endif
   let stacks = init_stacks in
   let fmt = {fmt; stacks} in
+#if OCAML_VERSION < (4, 08, 0)
   let mark_open_tag = mark_open_tag fmt in
   let mark_close_tag = mark_close_tag fmt in
   let () = Format.pp_set_formatter_tag_functions fmt.fmt Format.{mark_open_tag; mark_close_tag; print_open_tag; print_close_tag} in
+#else
+  let mark_open_stag = mark_open_stag fmt in
+  let mark_close_stag = mark_close_stag fmt in
+  let () = Format.pp_set_formatter_stag_functions fmt.fmt Format.{mark_open_stag; mark_close_stag; print_open_stag; print_close_stag} in
+#endif
   let () = Format.pp_set_mark_tags fmt.fmt true in
   fmt
 
@@ -337,7 +485,7 @@ let printf (type a) (f: (a, Format.formatter, unit) format) : a =
 let eprintf (type a) (f: (a, Format.formatter, unit) format) : a =
   Format.fprintf raw_err_formatter f
 
-let kasprintf (type a b) (k: string -> a) (f: (b, Format.formatter, unit, a) format4) : b =
+let kasprintf (type a) (type b) (k: string -> a) (f: (b, Format.formatter, unit, a) format4) : b =
   let buf = Buffer.create 512 in
   let fmt = Format.formatter_of_buffer buf in
   let () = prettify_formatter fmt in
@@ -349,6 +497,7 @@ let asprintf (type a) (f: (a, Format.formatter, unit, string) format4) : a =
 let pp_print_flush (fmt: formatter) () : unit =
   Format.pp_print_flush fmt.fmt ()
 
+#if OCAML_VERSION < (4, 08, 0)
 let rec string_of_color (c: Ocolor_types.color) : string =
   let open Ocolor_types in
   match c with
@@ -403,18 +552,27 @@ let string_of_style (l: Ocolor_types.style) : string =
 
 let string_of_styles (l: Ocolor_types.style list) : string =
   List.map string_of_style l |> String.concat ";"
+#endif
 
 let pp_open_styles (fmt: Format.formatter) (l: Ocolor_types.style list) : unit =
+#if OCAML_VERSION < (4, 08, 0)
   string_of_styles l |> Format.pp_open_tag fmt
+#else
+  Ocolor_styles_tag l |> Format.pp_open_stag fmt
+#endif
 
 let pp_open_style (fmt: Format.formatter) (s: Ocolor_types.style) : unit =
-  string_of_styles [s] |> Format.pp_open_tag fmt
+  pp_open_styles fmt [s]
 
 let pp_close_styles (fmt: Format.formatter) ((): unit) : unit =
+#if OCAML_VERSION < (4, 08, 0)
   Format.pp_close_tag fmt ()
+#else
+  Format.pp_close_stag fmt ()
+#endif
 
 let pp_close_style (fmt: Format.formatter) ((): unit) : unit =
-  Format.pp_close_tag fmt ()
+  pp_close_styles fmt ()
 
 let pp_bool_generic
     ?(false_style: Ocolor_types.style list=Ocolor_types.[Bold;Fg (C4 red)])
@@ -422,12 +580,12 @@ let pp_bool_generic
     (fmt: Format.formatter) (b: bool) : unit =
   let style =
     if b then
-      string_of_styles true_style
+      true_style
     else
-      string_of_styles false_style
+      false_style
   in
   Format.fprintf fmt "%a%b%a"
-    Format.pp_open_tag style b Format.pp_close_tag ()
+    pp_open_styles style b pp_close_styles ()
 
 
 let pp_bool (fmt: Format.formatter) (b: bool) : unit =
@@ -441,26 +599,22 @@ let pp_list_generic
     (type a)
     (p: Format.formatter -> a -> unit) (fmt: Format.formatter) (l: a list)
   : unit =
-  let delim_style = string_of_styles delim_style in
-  let sep_style = string_of_styles sep_style in
-  let elem_style = string_of_styles elem_style in
-  let open Format in
-  let () = fprintf fmt "%a%s%a" pp_open_tag delim_style left pp_close_tag () in
+  let () = Format.fprintf fmt "%a%s%a" pp_open_styles delim_style left pp_close_style () in
   match l with
-  | [] -> fprintf fmt "%a%s%a" pp_open_tag delim_style right pp_close_tag ()
-  | [e] -> fprintf fmt "%a%a%a%a%s%a" pp_open_tag elem_style p e pp_close_tag () pp_open_tag delim_style right pp_close_tag ()
+  | [] -> Format.fprintf fmt "%a%s%a" pp_open_styles delim_style right pp_close_styles ()
+  | [e] -> Format.fprintf fmt "%a%a%a%a%s%a" pp_open_styles elem_style p e pp_close_styles () pp_open_styles delim_style right pp_close_styles ()
   | t::q ->
     let () =
-      fprintf fmt "%a%a%a" pp_open_tag elem_style p t pp_close_tag ()
+      Format.fprintf fmt "%a%a%a" pp_open_styles elem_style p t pp_close_styles ()
     in
     let () =
       List.iter
         (fun e ->
-           fprintf fmt "%a%s%a%a%a%a" pp_open_tag sep_style sep pp_close_tag () pp_open_tag elem_style p e pp_close_tag ();
+           Format.fprintf fmt "%a%s%a%a%a%a" pp_open_styles sep_style sep pp_close_styles () pp_open_styles elem_style p e pp_close_styles ();
         )
         q
     in
-    fprintf fmt "%a%s%a" pp_open_tag delim_style right pp_close_tag ()
+    Format.fprintf fmt "%a%s%a" pp_open_styles delim_style right pp_close_styles ()
 
 let pp_list p fmt l = pp_list_generic p fmt l
 
@@ -471,14 +625,11 @@ let pp_option_generic
     (type a)
     (p: Format.formatter -> a -> unit) (fmt: Format.formatter) (o: a option)
   : unit =
-  let open Format in
   match o with
   | None ->
-    let none_style = string_of_styles none_style in
-    fprintf fmt "%a%s%a" pp_open_tag none_style none pp_close_tag ()
+    Format.fprintf fmt "%a%s%a" pp_open_styles none_style none pp_close_styles ()
   | Some o ->
-    let some_style = string_of_styles some_style in
-    fprintf fmt "%a%a%a" pp_open_tag some_style p o pp_close_tag ()
+    Format.fprintf fmt "%a%a%a" pp_open_styles some_style p o pp_close_styles ()
 
 let pp_option p fmt o = pp_option_generic p fmt o
 
@@ -487,36 +638,33 @@ let pp_pair_generic
     ?(delim_style: Ocolor_types.style list=Ocolor_types.[Faint])
     ?(sep_style: Ocolor_types.style list=Ocolor_types.[Faint])
     ?(elem_style: Ocolor_types.style list=[])
-    (type a b)
+    (type a) (type b)
     (f: Format.formatter -> a -> unit)
     (g: Format.formatter -> b -> unit)
     (fmt: Format.formatter)
     (a, b : a * b)
   : unit =
-  let delim_style = string_of_styles delim_style in
-  let sep_style = string_of_styles sep_style in
-  let elem_style = string_of_styles elem_style in
   let l_delim (fmt: Format.formatter) : unit =
     Format.fprintf fmt "%a%s%a"
-      Format.pp_open_tag delim_style left Format.pp_close_tag ()
+      pp_open_styles delim_style left pp_close_styles ()
   in
   let r_delim (fmt: Format.formatter) : unit =
     Format.fprintf fmt "%a%s%a"
-      Format.pp_open_tag delim_style right Format.pp_close_tag ()
+      pp_open_styles delim_style right pp_close_styles ()
   in
   let sep (fmt: Format.formatter) : unit =
     Format.fprintf fmt "%a%s%a"
-      Format.pp_open_tag sep_style sep Format.pp_close_tag ()
+      pp_open_styles sep_style sep pp_close_styles ()
   in
   let elem (type a) (p: Format.formatter -> a -> unit) (fmt: Format.formatter) (a: a) : unit =
     Format.fprintf fmt "%a%a%a"
-      Format.pp_open_tag elem_style p a Format.pp_close_tag ()
+      pp_open_styles elem_style p a pp_close_styles ()
   in
   Format.fprintf fmt "%t%a%t%a%t"
     l_delim (elem f) a sep (elem g) b r_delim
 
 let pp_pair
-    (type a b)
+    (type a) (type b)
     (f: Format.formatter -> a -> unit)
     (g: Format.formatter -> b -> unit)
     (fmt: Format.formatter)
@@ -529,36 +677,33 @@ let pp_3_tuple_generic
     ?(delim_style: Ocolor_types.style list=Ocolor_types.[Faint])
     ?(sep_style: Ocolor_types.style list=Ocolor_types.[Faint])
     ?(elem_style: Ocolor_types.style list=[])
-    (type a b c)
+    (type a) (type b) (type c)
     (f: Format.formatter -> a -> unit)
     (g: Format.formatter -> b -> unit)
     (h: Format.formatter -> c -> unit)
     (fmt: Format.formatter)
     (a, b, c : a * b * c)
   : unit =
-  let delim_style = string_of_styles delim_style in
-  let sep_style = string_of_styles sep_style in
-  let elem_style = string_of_styles elem_style in
   let l_delim (fmt: Format.formatter) : unit =
     Format.fprintf fmt "%a%s%a"
-      Format.pp_open_tag delim_style left Format.pp_close_tag ()
+      pp_open_styles delim_style left pp_close_styles ()
   in
   let r_delim (fmt: Format.formatter) : unit =
     Format.fprintf fmt "%a%s%a"
-      Format.pp_open_tag delim_style right Format.pp_close_tag ()
+      pp_open_styles delim_style right pp_close_styles ()
   in
   let sep (fmt: Format.formatter) : unit =
     Format.fprintf fmt "%a%s%a"
-      Format.pp_open_tag sep_style sep Format.pp_close_tag ()
+      pp_open_styles sep_style sep pp_close_styles ()
   in
   let elem (type a) (p: Format.formatter -> a -> unit) (fmt: Format.formatter) (a: a) : unit =
     Format.fprintf fmt "%a%a%a"
-      Format.pp_open_tag elem_style p a Format.pp_close_tag ()
+      pp_open_styles elem_style p a pp_close_styles ()
   in
   Format.fprintf fmt "%t%a%t%a%t%a%t"
     l_delim (elem f) a sep (elem g) b sep (elem h) c r_delim
 
-let pp_3_tuple (type a b c)
+let pp_3_tuple (type a) (type b) (type c)
     (f: Format.formatter -> a -> unit)
     (g: Format.formatter -> b -> unit)
     (h: Format.formatter -> c -> unit)
@@ -572,7 +717,7 @@ let pp_4_tuple_generic
     ?(delim_style: Ocolor_types.style list=Ocolor_types.[Faint])
     ?(sep_style: Ocolor_types.style list=Ocolor_types.[Faint])
     ?(elem_style: Ocolor_types.style list=[])
-    (type a b c d)
+    (type a) (type b) (type c) (type d)
     (f: Format.formatter -> a -> unit)
     (g: Format.formatter -> b -> unit)
     (h: Format.formatter -> c -> unit)
@@ -580,29 +725,26 @@ let pp_4_tuple_generic
     (fmt: Format.formatter)
     (a, b, c, d : a * b * c * d)
   : unit =
-  let delim_style = string_of_styles delim_style in
-  let sep_style = string_of_styles sep_style in
-  let elem_style = string_of_styles elem_style in
   let l_delim (fmt: Format.formatter) : unit =
     Format.fprintf fmt "%a%s%a"
-      Format.pp_open_tag delim_style left Format.pp_close_tag ()
+      pp_open_styles delim_style left pp_close_styles ()
   in
   let r_delim (fmt: Format.formatter) : unit =
     Format.fprintf fmt "%a%s%a"
-      Format.pp_open_tag delim_style right Format.pp_close_tag ()
+      pp_open_styles delim_style right pp_close_styles ()
   in
   let sep (fmt: Format.formatter) : unit =
     Format.fprintf fmt "%a%s%a"
-      Format.pp_open_tag sep_style sep Format.pp_close_tag ()
+      pp_open_styles sep_style sep pp_close_styles ()
   in
   let elem (type a) (p: Format.formatter -> a -> unit) (fmt: Format.formatter) (a: a) : unit =
     Format.fprintf fmt "%a%a%a"
-      Format.pp_open_tag elem_style p a Format.pp_close_tag ()
+      pp_open_styles elem_style p a pp_close_styles ()
   in
   Format.fprintf fmt "%t%a%t%a%t%a%t%a%t"
     l_delim (elem f) a sep (elem g) b sep (elem h) c sep (elem i) d r_delim
 
-let pp_4_tuple (type a b c d)
+let pp_4_tuple (type a) (type b) (type c) (type d)
     (f: Format.formatter -> a -> unit)
     (g: Format.formatter -> b -> unit)
     (h: Format.formatter -> c -> unit)
@@ -617,7 +759,7 @@ let pp_5_tuple_generic
     ?(delim_style: Ocolor_types.style list=Ocolor_types.[Faint])
     ?(sep_style: Ocolor_types.style list=Ocolor_types.[Faint])
     ?(elem_style: Ocolor_types.style list=[])
-    (type a b c d e)
+    (type a) (type b) (type c) (type d) (type e)
     (f: Format.formatter -> a -> unit)
     (g: Format.formatter -> b -> unit)
     (h: Format.formatter -> c -> unit)
@@ -626,29 +768,26 @@ let pp_5_tuple_generic
     (fmt: Format.formatter)
     (a, b, c, d, e : a * b * c * d * e)
   : unit =
-  let delim_style = string_of_styles delim_style in
-  let sep_style = string_of_styles sep_style in
-  let elem_style = string_of_styles elem_style in
   let l_delim (fmt: Format.formatter) : unit =
     Format.fprintf fmt "%a%s%a"
-      Format.pp_open_tag delim_style left Format.pp_close_tag ()
+      pp_open_styles delim_style left pp_close_styles ()
   in
   let r_delim (fmt: Format.formatter) : unit =
     Format.fprintf fmt "%a%s%a"
-      Format.pp_open_tag delim_style right Format.pp_close_tag ()
+      pp_open_styles delim_style right pp_close_styles ()
   in
   let sep (fmt: Format.formatter) : unit =
     Format.fprintf fmt "%a%s%a"
-      Format.pp_open_tag sep_style sep Format.pp_close_tag ()
+      pp_open_styles sep_style sep pp_close_styles ()
   in
   let elem (type a) (p: Format.formatter -> a -> unit) (fmt: Format.formatter) (a: a) : unit =
     Format.fprintf fmt "%a%a%a"
-      Format.pp_open_tag elem_style p a Format.pp_close_tag ()
+      pp_open_styles elem_style p a pp_close_styles ()
   in
   Format.fprintf fmt "%t%a%t%a%t%a%t%a%t%a%t"
     l_delim (elem f) a sep (elem g) b sep (elem h) c sep (elem i) d sep (elem j) e r_delim
 
-let pp_5_tuple (type a b c d e)
+let pp_5_tuple (type a) (type b) (type c) (type d) (type e)
     (f: Format.formatter -> a -> unit)
     (g: Format.formatter -> b -> unit)
     (h: Format.formatter -> c -> unit)

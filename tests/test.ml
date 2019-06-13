@@ -1,6 +1,19 @@
 open Ocolor_types
 open Ocolor_config
 
+let list_all_colors () : unit =
+  set_color_capability Color24;
+  List.iter
+    (fun (name, (r24, g24, b24)) ->
+       Ocolor_format.printf "%a%s%s 0x%02X%02X%02X   %03d, %03d, %03d%a\n"
+         Ocolor_format.pp_open_style (Fg(C24{r24; g24; b24}))
+         name (String.make (max 0 (30 - String.length name)) ' ')
+         r24 g24 b24
+         r24 g24 b24
+         Ocolor_format.pp_close_style ()
+    )
+    Ocolor_x11.available_colors
+
 let spectrum () : unit =
   let p i j k = Ocolor_format.printf "%a0%a" Ocolor_format.pp_open_style (Fg(C24{r24 = i; g24 = j; b24 = k})) Ocolor_format.pp_close_style () in
   for i = 0 to 255 do
