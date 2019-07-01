@@ -1,3 +1,6 @@
+Working:
+- add pp_iterable_generic, pp_iterable, pp_iterable_mapping_generic and pp_iterable_mapping
+
 1.1 (13-09-2019):
 - dune is now a build dependency
 - Support OCaml from 4.02.3, using cppo

@@ -434,3 +434,59 @@ val pp_5_tuple:
   (Format.formatter -> 'e -> unit) ->
   (Format.formatter) ->
   ('a * 'b * 'c * 'd * 'e) -> unit
+
+(** Print an itarable set-like data structure
+    Default settings:
+    - [left] = ["{"]
+    - [sep] = ["; "]
+    - [right] = ["}"]
+    - [delim_style] = [Ocolor_types.[Faint]]
+    - [sep_style] = [Ocolor_types.[Faint]]
+    - [elem_style] = [[]]
+*)
+val pp_iterable_generic:
+  ?left:string -> ?sep:string -> ?right:string ->
+  ?delim_style:Ocolor_types.style list ->
+  ?sep_style:Ocolor_types.style list ->
+  ?elem_style:Ocolor_types.style list ->
+  (('value -> unit) -> 't -> unit) ->
+  (Format.formatter -> 'value -> unit) ->
+  Format.formatter -> 't -> unit
+
+(** Default version of pp_iterable_generic *)
+val pp_iterable:
+  (('value -> unit) -> 't -> unit) ->
+  (Format.formatter -> 'value -> unit) ->
+  Format.formatter -> 't -> unit
+
+(** Print an itarable map-like data structure
+    Default settings:
+    - [left] = ["{"]
+    - [sep] = ["; "]
+    - [right] = ["}"]
+    - [mapsto] = [":"]
+    - [delim_style] = [Ocolor_types.[Faint]]
+    - [sep_style] = [Ocolor_types.[Faint]]
+    - [mapsto_style] = [Ocolor_types.[Faint]]
+    - [key_style] = [[]]
+    - [value_style] = [[]]
+*)
+val pp_iterable_mapping_generic:
+  ?left:string -> ?sep:string -> ?right:string ->
+  ?mapsto:string ->
+  ?delim_style:Ocolor_types.style list ->
+  ?sep_style:Ocolor_types.style list ->
+  ?mapsto_style:Ocolor_types.style list ->
+  ?key_style:Ocolor_types.style list ->
+  ?value_style:Ocolor_types.style list ->
+  (('key -> 'value -> unit) -> 't -> unit) ->
+  (Format.formatter -> 'key -> unit) ->
+  (Format.formatter -> 'value -> unit) ->
+  Format.formatter -> 't -> unit
+
+(** Default version of pp_iterable_mapping_generic *)
+val pp_iterable_mapping:
+  (('key -> 'value -> unit) -> 't -> unit) ->
+  (Format.formatter -> 'key -> unit) ->
+  (Format.formatter -> 'value -> unit) ->
+  Format.formatter -> 't -> unit
