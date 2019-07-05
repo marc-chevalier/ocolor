@@ -591,33 +591,6 @@ let pp_bool_generic
 let pp_bool (fmt: Format.formatter) (b: bool) : unit =
   pp_bool_generic fmt b
 
-let pp_list_generic
-    ?(left: string="[") ?(sep: string="; ") ?(right: string="]")
-    ?(delim_style: Ocolor_types.style list=Ocolor_types.[Faint])
-    ?(sep_style: Ocolor_types.style list=Ocolor_types.[Faint])
-    ?(elem_style: Ocolor_types.style list=[])
-    (type a)
-    (p: Format.formatter -> a -> unit) (fmt: Format.formatter) (l: a list)
-  : unit =
-  let () = Format.fprintf fmt "%a%s%a" pp_open_styles delim_style left pp_close_style () in
-  match l with
-  | [] -> Format.fprintf fmt "%a%s%a" pp_open_styles delim_style right pp_close_styles ()
-  | [e] -> Format.fprintf fmt "%a%a%a%a%s%a" pp_open_styles elem_style p e pp_close_styles () pp_open_styles delim_style right pp_close_styles ()
-  | t::q ->
-    let () =
-      Format.fprintf fmt "%a%a%a" pp_open_styles elem_style p t pp_close_styles ()
-    in
-    let () =
-      List.iter
-        (fun e ->
-           Format.fprintf fmt "%a%s%a%a%a%a" pp_open_styles sep_style sep pp_close_styles () pp_open_styles elem_style p e pp_close_styles ();
-        )
-        q
-    in
-    Format.fprintf fmt "%a%s%a" pp_open_styles delim_style right pp_close_styles ()
-
-let pp_list p fmt l = pp_list_generic p fmt l
-
 let pp_option_generic
     ?(none: string="None")
     ?(none_style: Ocolor_types.style list=Ocolor_types.[Faint])
@@ -823,10 +796,10 @@ let pp_iterable_generic
     iter
       (fun v ->
          if !first then
-           let () = first := false in
-           Format.fprintf fmt "%a" value v
+           first := false
          else
-           Format.fprintf fmt "%t%a" sep value v
+           sep fmt;
+         value fmt v
       )
       x
   in
@@ -840,6 +813,53 @@ let pp_iterable (type value) (type t)
     (x: t)
   : unit =
   pp_iterable_generic iter p fmt x
+
+let pp_list_generic
+    ?(left: string="[") ?(sep: string="; ") ?(right: string="]")
+    ?(delim_style: Ocolor_types.style list=Ocolor_types.[Faint])
+    ?(sep_style: Ocolor_types.style list=Ocolor_types.[Faint])
+    ?(elem_style: Ocolor_types.style list=[])
+    (type a)
+    (p: Format.formatter -> a -> unit) (fmt: Format.formatter) (l: a list)
+  : unit =
+  pp_iterable_generic ~left ~sep ~right
+    ~delim_style ~sep_style ~elem_style
+    List.iter p fmt l
+
+let pp_list (type a) (p: Format.formatter -> a -> unit)
+    (fmt: Format.formatter) (l: a list)
+  : unit =
+  pp_list_generic p fmt l
+
+let pp_iterable_mapping_more_generic
+    (type key) (type value) (type t)
+    ?(left: string="{") ?(sep: string="; ") ?(right: string="}")
+    ?(delim_style: Ocolor_types.style list=Ocolor_types.[Faint])
+    ?(sep_style: Ocolor_types.style list=Ocolor_types.[Faint])
+    (iter: (key -> value -> unit) -> t -> unit)
+    (p: Format.formatter -> key * value -> unit)
+    (fmt: Format.formatter)
+    (x: t)
+  : unit =
+  let () = Format.fprintf fmt "%a%s%a" pp_open_styles delim_style left pp_close_styles () in
+  let first = ref true in
+  let sep (fmt: Format.formatter) : unit =
+    Format.fprintf fmt "%a%s%a"
+      pp_open_styles sep_style sep pp_close_styles ()
+  in
+  let () =
+    iter
+      (fun k v ->
+         if !first then
+           first := false
+         else
+           sep fmt;
+         p fmt (k, v)
+      )
+      x
+  in
+  let () = Format.fprintf fmt "%a%s%a" pp_open_styles delim_style right pp_close_styles () in
+  ()
 
 let pp_iterable_mapping_generic
     (type key) (type value) (type t)
@@ -857,11 +877,6 @@ let pp_iterable_mapping_generic
     (x: t)
   : unit =
   let () = Format.fprintf fmt "%a%s%a" pp_open_styles delim_style left pp_close_styles () in
-  let first = ref true in
-  let sep (fmt: Format.formatter) : unit =
-    Format.fprintf fmt "%a%s%a"
-      pp_open_styles sep_style sep pp_close_styles ()
-  in
   let mapsto (fmt: Format.formatter) : unit =
     Format.fprintf fmt "%a%s%a"
       pp_open_styles mapsto_style mapsto pp_close_styles ()
@@ -874,19 +889,12 @@ let pp_iterable_mapping_generic
     Format.fprintf fmt "%a%a%a"
       pp_open_styles value_style pv a pp_close_styles ()
   in
-  let () =
-    iter
-      (fun k v ->
-         if !first then
-           let () = first := false in
-           Format.fprintf fmt "%a%t%a" key k mapsto value v
-         else
-           Format.fprintf fmt "%t%a%t%a" sep key k mapsto value v
-      )
-      x
-  in
   let () = Format.fprintf fmt "%a%s%a" pp_open_styles delim_style right pp_close_styles () in
-  ()
+  let p (fmt: Format.formatter) (k, v: key * value) : unit =
+    Format.fprintf fmt "%a%t%a" key k mapsto value v
+  in
+  pp_iterable_mapping_more_generic ~left ~right ~sep
+    ~delim_style ~sep_style iter p fmt x
 
 let pp_iterable_mapping
     (type key) (type value) (type t)

@@ -1,5 +1,7 @@
 Working:
 - add pp_iterable_generic, pp_iterable, pp_iterable_mapping_generic and pp_iterable_mapping
+- add pp_iterable_mapping_more_generic
+- cleanup: rewrite pp_list_generic using pp_iterable_generic and remove useless calls to fprintf
 
 1.1 (13-09-2019):
 - dune is now a build dependency

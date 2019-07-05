@@ -464,6 +464,23 @@ val pp_iterable:
     - [left] = ["{"]
     - [sep] = ["; "]
     - [right] = ["}"]
+    - [delim_style] = [Ocolor_types.[Faint]]
+    - [sep_style] = [Ocolor_types.[Faint]]
+*)
+val pp_iterable_mapping_more_generic:
+    ?left:string -> ?sep:string -> ?right:string ->
+    ?delim_style:Ocolor_types.style list ->
+    ?sep_style: Ocolor_types.style list ->
+    (('key -> 'value -> unit) -> 't -> unit) ->
+    (Format.formatter -> 'key * 'value -> unit) ->
+    Format.formatter -> 't -> unit
+
+(** Print an itarable map-like data structure as a sequence of
+    <key><mapsto><value> separeted by <sep>.
+    Default settings:
+    - [left] = ["{"]
+    - [sep] = ["; "]
+    - [right] = ["}"]
     - [mapsto] = [":"]
     - [delim_style] = [Ocolor_types.[Faint]]
     - [sep_style] = [Ocolor_types.[Faint]]
