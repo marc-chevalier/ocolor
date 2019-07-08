@@ -276,7 +276,23 @@ val pp_close_style: Format.formatter -> unit -> unit
 
 (** {3 Pretty printers for common types} *)
 
+(** {4 Modules} *)
+
+(** The module that contains handy pretty printers with styling enbaled.
+    This module is included at the toplevel to make its contents quickly
+    available. *)
+module StylingPrettyPrinters: Ocolor_pp.PRETTY_PRINTERS
+  with type formatter := Format.formatter
+
+(** The module that contains handy pretty printers with styling disabled.
+    Even with a prettified formatter, there will be no styles. *)
+module NonStylingPrettyPrinters: Ocolor_pp.PRETTY_PRINTERS
+  with type formatter := Format.formatter
+
+
 (** {4 Generic functions} *)
+(** These functions come from [StylingPrettyPrinters]
+*)
 
 (** Pretty print a bool. Useful with %a. It displays boolean as %b but with
     styles.
@@ -389,52 +405,6 @@ val pp_5_tuple_generic:
   (Format.formatter) ->
   ('a * 'b * 'c * 'd * 'e) -> unit
 
-
-(** {4 Default pretty printers} *)
-
-(** Like {!pp_bool_generic} with default settings *)
-val pp_bool: Format.formatter -> bool -> unit
-
-(** Like {!pp_list_generic} with default settings *)
-val pp_list: (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a list -> unit
-
-(** Like {!pp_option_generic} with default settings *)
-val pp_option: (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a option -> unit
-
-(** Like {!pp_pair_generic} with default settings *)
-val pp_pair:
-  (Format.formatter -> 'a -> unit) ->
-  (Format.formatter -> 'b -> unit) ->
-  (Format.formatter) ->
-  ('a * 'b) -> unit
-
-(** Like {!pp_3_tuple_generic} with default settings *)
-val pp_3_tuple:
-  (Format.formatter -> 'a -> unit) ->
-  (Format.formatter -> 'b -> unit) ->
-  (Format.formatter -> 'c -> unit) ->
-  (Format.formatter) ->
-  ('a * 'b * 'c) -> unit
-
-(** Like {!pp_4_tuple_generic} with default settings *)
-val pp_4_tuple:
-  (Format.formatter -> 'a -> unit) ->
-  (Format.formatter -> 'b -> unit) ->
-  (Format.formatter -> 'c -> unit) ->
-  (Format.formatter -> 'd -> unit) ->
-  (Format.formatter) ->
-  ('a * 'b * 'c * 'd) -> unit
-
-(** Like {!pp_5_tuple_generic} with default settings *)
-val pp_5_tuple:
-  (Format.formatter -> 'a -> unit) ->
-  (Format.formatter -> 'b -> unit) ->
-  (Format.formatter -> 'c -> unit) ->
-  (Format.formatter -> 'd -> unit) ->
-  (Format.formatter -> 'e -> unit) ->
-  (Format.formatter) ->
-  ('a * 'b * 'c * 'd * 'e) -> unit
-
 (** Print an itarable set-like data structure
     Default settings:
     - [left] = ["{"]
@@ -449,12 +419,6 @@ val pp_iterable_generic:
   ?delim_style:Ocolor_types.style list ->
   ?sep_style:Ocolor_types.style list ->
   ?elem_style:Ocolor_types.style list ->
-  (('value -> unit) -> 't -> unit) ->
-  (Format.formatter -> 'value -> unit) ->
-  Format.formatter -> 't -> unit
-
-(** Default version of pp_iterable_generic *)
-val pp_iterable:
   (('value -> unit) -> 't -> unit) ->
   (Format.formatter -> 'value -> unit) ->
   Format.formatter -> 't -> unit
@@ -501,9 +465,62 @@ val pp_iterable_mapping_generic:
   (Format.formatter -> 'value -> unit) ->
   Format.formatter -> 't -> unit
 
+
+(** {4 Default pretty printers} *)
+
+(** Like {!pp_bool_generic} with default settings *)
+val pp_bool: Format.formatter -> bool -> unit
+
+(** Like {!pp_list_generic} with default settings *)
+val pp_list: (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a list -> unit
+
+(** Like {!pp_option_generic} with default settings *)
+val pp_option: (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a option -> unit
+
+(** Like {!pp_pair_generic} with default settings *)
+val pp_pair:
+  (Format.formatter -> 'a -> unit) ->
+  (Format.formatter -> 'b -> unit) ->
+  (Format.formatter) ->
+  ('a * 'b) -> unit
+
+(** Like {!pp_3_tuple_generic} with default settings *)
+val pp_3_tuple:
+  (Format.formatter -> 'a -> unit) ->
+  (Format.formatter -> 'b -> unit) ->
+  (Format.formatter -> 'c -> unit) ->
+  (Format.formatter) ->
+  ('a * 'b * 'c) -> unit
+
+(** Like {!pp_4_tuple_generic} with default settings *)
+val pp_4_tuple:
+  (Format.formatter -> 'a -> unit) ->
+  (Format.formatter -> 'b -> unit) ->
+  (Format.formatter -> 'c -> unit) ->
+  (Format.formatter -> 'd -> unit) ->
+  (Format.formatter) ->
+  ('a * 'b * 'c * 'd) -> unit
+
+(** Like {!pp_5_tuple_generic} with default settings *)
+val pp_5_tuple:
+  (Format.formatter -> 'a -> unit) ->
+  (Format.formatter -> 'b -> unit) ->
+  (Format.formatter -> 'c -> unit) ->
+  (Format.formatter -> 'd -> unit) ->
+  (Format.formatter -> 'e -> unit) ->
+  (Format.formatter) ->
+  ('a * 'b * 'c * 'd * 'e) -> unit
+
+(** Default version of pp_iterable_generic *)
+val pp_iterable:
+  (('value -> unit) -> 't -> unit) ->
+  (Format.formatter -> 'value -> unit) ->
+  Format.formatter -> 't -> unit
+
 (** Default version of pp_iterable_mapping_generic *)
 val pp_iterable_mapping:
   (('key -> 'value -> unit) -> 't -> unit) ->
   (Format.formatter -> 'key -> unit) ->
   (Format.formatter -> 'value -> unit) ->
   Format.formatter -> 't -> unit
+
