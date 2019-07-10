@@ -421,7 +421,6 @@ module BuildPrettyPrinters
         (fmt: formatter)
         (x: t)
       : unit =
-      let () = fprintf fmt "%a%s%a" pp_open_styles delim_style left pp_close_styles () in
       let mapsto (fmt: formatter) : unit =
         fprintf fmt "%a%s%a"
           pp_open_styles mapsto_style mapsto pp_close_styles ()
@@ -434,7 +433,6 @@ module BuildPrettyPrinters
         fprintf fmt "%a%a%a"
           pp_open_styles value_style pv a pp_close_styles ()
       in
-      let () = fprintf fmt "%a%s%a" pp_open_styles delim_style right pp_close_styles () in
       let p (fmt: formatter) (k, v: key * value) : unit =
         fprintf fmt "%a%t%a" key k mapsto value v
       in
