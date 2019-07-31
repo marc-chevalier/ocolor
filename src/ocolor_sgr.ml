@@ -3,7 +3,7 @@ open Ocolor_types
 (** Until the last moment, it is more convenient to work with list of integers.
     It is easier to apply several styles at once, since a sequence can be the
     concatenation of several simple sequences. And, at the last moment, we
-    ranslate it as the string sequence as it will be passed to the terminal.
+    translate it as the string sequence as it will be passed to the terminal.
 *)
 type seq = int list
 

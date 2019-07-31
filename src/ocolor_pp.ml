@@ -9,12 +9,53 @@ module type PRETTY_PRINTERS =
       bool pp
     val pp_bool: bool pp
 
+    val pp_option_more_generic:
+      ?none:string ->
+      ?none_style:Ocolor_types.style list ->
+      ?some_style:Ocolor_types.style list ->
+      ?some_format:(Ocolor_types.style list pp ->
+                    Ocolor_types.style list ->
+                    'a pp -> 'a ->
+                    unit pp -> unit -> unit,
+                    formatter, unit, unit, unit, unit)
+          format6 ->
+      ?none_format:(Ocolor_types.style list pp ->
+                    Ocolor_types.style list ->
+                    string ->
+                    unit pp -> unit -> unit,
+                    formatter, unit, unit, unit, unit)
+          format6 ->
+      'a pp -> 'a option pp
     val pp_option_generic:
       ?none:string ->
       ?none_style:Ocolor_types.style list ->
       ?some_style:Ocolor_types.style list ->
       'a pp -> 'a option pp
     val pp_option: 'a pp -> 'a option pp
+
+#if OCAML_VERSION >= (4, 03, 0)
+    val pp_result_more_generic:
+      ?ok_style:Ocolor_types.style list ->
+      ?error_style:Ocolor_types.style list ->
+      ?ok_format:(Ocolor_types.style list pp ->
+                  Ocolor_types.style list ->
+                  'a pp -> 'a ->
+                  unit pp -> unit -> unit,
+                  formatter, unit, unit, unit, unit)
+          format6 ->
+      ?error_format:(Ocolor_types.style list pp ->
+                     Ocolor_types.style list ->
+                     'b pp ->
+                     'b -> unit pp -> unit -> unit,
+                     formatter, unit, unit, unit, unit)
+          format6 ->
+      'a pp -> 'b pp -> ('a, 'b) result pp
+    val pp_result_generic:
+      ?ok_style:Ocolor_types.style list ->
+      ?error_style:Ocolor_types.style list ->
+      'a pp -> 'b pp -> ('a, 'b) result pp
+    val pp_result: 'a pp -> 'b pp -> ('a, 'b) result pp
+#endif
 
     val pp_pair_generic:
       ?left:string ->
@@ -77,6 +118,16 @@ module type PRETTY_PRINTERS =
       'a pp -> 'a list pp
     val pp_list: 'a pp -> 'a list pp
 
+    val pp_array_generic:
+      ?left:string ->
+      ?sep:string ->
+      ?right:string ->
+      ?delim_style:Ocolor_types.style list ->
+      ?sep_style:Ocolor_types.style list ->
+      ?elem_style:Ocolor_types.style list ->
+      'a pp -> 'a array pp
+    val pp_array: 'a pp -> 'a array pp
+
     val pp_iterable_mapping_more_generic :
       ?left:string ->
       ?sep:string ->
@@ -135,6 +186,23 @@ module BuildPrettyPrinters
     let pp_bool (fmt: formatter) (b: bool) : unit =
       pp_bool_generic fmt b
 
+    let pp_option_more_generic
+        ?(none: string="None")
+        ?(none_style: Ocolor_types.style list=Ocolor_types.[Faint])
+        ?(some_style: Ocolor_types.style list=[])
+        (type a)
+        ?(some_format: ((formatter -> Ocolor_types.style list -> unit) -> Ocolor_types.style list -> a pp -> a -> (formatter -> unit -> unit) -> unit -> unit, formatter, unit, unit, unit, unit) format6=(format_of_string "%a%a%a"))
+        ?(none_format: ((formatter -> Ocolor_types.style list -> unit) -> Ocolor_types.style list -> string -> (formatter -> unit -> unit) -> unit -> unit, formatter, unit, unit, unit, unit) format6=(format_of_string "%a%s%a"))
+        (p: a pp)
+        (fmt: formatter)
+        (o: a option)
+      : unit =
+      match o with
+      | None ->
+        fprintf fmt none_format pp_open_styles none_style none pp_close_styles ()
+      | Some o ->
+        fprintf fmt some_format pp_open_styles some_style p o pp_close_styles ()
+
     let pp_option_generic
         ?(none: string="None")
         ?(none_style: Ocolor_types.style list=Ocolor_types.[Faint])
@@ -144,13 +212,41 @@ module BuildPrettyPrinters
         (fmt: formatter)
         (o: a option)
       : unit =
-      match o with
-      | None ->
-        fprintf fmt "%a%s%a" pp_open_styles none_style none pp_close_styles ()
-      | Some o ->
-        fprintf fmt "%a%a%a" pp_open_styles some_style p o pp_close_styles ()
+      pp_option_more_generic
+        ~none ~none_style ~some_style p fmt o
 
     let pp_option p fmt o = pp_option_generic p fmt o
+
+#if OCAML_VERSION >= (4, 03, 0)
+    let pp_result_more_generic
+        (type a) (type b)
+        ?(ok_style: Ocolor_types.style list=[])
+        ?(error_style: Ocolor_types.style list=Ocolor_types.[Fg (C4 red)])
+        ?(ok_format: ((formatter -> Ocolor_types.style list -> unit) -> Ocolor_types.style list -> a pp -> a -> (formatter -> unit -> unit) -> unit -> unit, formatter, unit, unit, unit, unit) format6=(format_of_string "%a%a%a"))
+        ?(error_format: ((formatter -> Ocolor_types.style list -> unit) -> Ocolor_types.style list -> b pp -> b -> (formatter -> unit -> unit) -> unit -> unit, formatter, unit, unit, unit, unit) format6=(format_of_string "%a%a%a"))
+        (pa: a pp) (pb: b pp)
+        (fmt: formatter)
+        (r: (a, b) result)
+      : unit =
+      match r with
+      | Ok a ->
+        fprintf fmt ok_format pp_open_styles ok_style pa a pp_close_styles ()
+      | Error b ->
+        fprintf fmt error_format pp_open_styles error_style pb b pp_close_styles ()
+
+    let pp_result_generic
+        ?(ok_style: Ocolor_types.style list=[])
+        ?(error_style: Ocolor_types.style list=Ocolor_types.[Fg (C4 red)])
+        (type a) (type b)
+        (pa: a pp) (pb: b pp)
+        (fmt: formatter)
+        (r: (a, b) result)
+      : unit =
+      pp_result_more_generic
+        ~ok_style ~error_style pa pb fmt r
+
+    let pp_result p fmt o = pp_result_generic p fmt o
+#endif
 
     let pp_pair_generic
         ?(left: string="(") ?(sep: string=", ") ?(right: string=")")
@@ -375,6 +471,23 @@ module BuildPrettyPrinters
         (fmt: formatter) (l: a list)
       : unit =
       pp_list_generic p fmt l
+
+    let pp_array_generic
+        ?(left: string="[") ?(sep: string="; ") ?(right: string="]")
+        ?(delim_style: Ocolor_types.style list=Ocolor_types.[Faint])
+        ?(sep_style: Ocolor_types.style list=Ocolor_types.[Faint])
+        ?(elem_style: Ocolor_types.style list=[])
+        (type a)
+        (p: a pp) (fmt: formatter) (l: a array)
+      : unit =
+      pp_iterable_generic ~left ~sep ~right
+        ~delim_style ~sep_style ~elem_style
+        Array.iter p fmt l
+
+    let pp_array (type a) (p: a pp)
+        (fmt: formatter) (l: a array)
+      : unit =
+      pp_array_generic p fmt l
 
     let pp_iterable_mapping_more_generic
         (type key) (type value) (type t)

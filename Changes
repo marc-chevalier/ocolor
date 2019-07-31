@@ -1,3 +1,6 @@
+Working:
+- Add pp_result and generics
+
 1.2.2 (2022-01-04):
 - Disable warning 70 (missing mli file)
 
