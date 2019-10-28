@@ -125,4 +125,8 @@ let test () : unit =
        Ocolor_format.printf "\n"
     )
     l;
-  Ocolor_format.printf "\n";
+  Ocolor_format.printf "\n"
+
+let () =
+  test ();
+  list_all_colors ()

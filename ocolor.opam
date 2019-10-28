@@ -8,9 +8,13 @@ depends: [
   "ocaml" {>= "4.02.3"}
   "dune" {>= "1.6.3"}
   "cppo" {build & >= "1.6.5"}
+  "ounit" {with-test & >= "2.0.8"}
 ]
 build: [
   ["dune" "build" "-p" name "-j" jobs]
+]
+run-test: [
+  ["dune" "runtest"]
 ]
 homepage: "https://github.com/marc-chevalier/ocolor"
 bug-reports: "https://github.com/marc-chevalier/ocolor/issues"
