@@ -1,61 +1,93 @@
-image: ocaml/opam2
-
 before_script:
   - sudo apt-get update -y && sudo apt-get install m4 -y
 
 ocaml-4.02:
+  image: ocaml/opam:ubuntu-lts-ocaml-4.02
   script:
-    - opam switch 4.02
-    - eval $(opam env)
     - opam install ./ocolor.opam --deps-only -t
     - dune runtest
     - opam install ./ocolor.opam
 
 ocaml-4.03:
+  image: ocaml/opam:ubuntu-lts-ocaml-4.03
   script:
-    - opam switch 4.03
-    - eval $(opam env)
     - opam install ./ocolor.opam --deps-only -t
     - dune runtest
     - opam install ./ocolor.opam
 
 ocaml-4.04:
+  image: ocaml/opam:ubuntu-lts-ocaml-4.04
   script:
-    - opam switch 4.04
-    - eval $(opam env)
     - opam install ./ocolor.opam --deps-only -t
     - dune runtest
     - opam install ./ocolor.opam
 
 ocaml-4.05:
+  image: ocaml/opam:ubuntu-lts-ocaml-4.05
   script:
-    - opam switch 4.05
-    - eval $(opam env)
     - opam install ./ocolor.opam --deps-only -t
     - dune runtest
     - opam install ./ocolor.opam
 
 ocaml-4.06:
+  image: ocaml/opam:ubuntu-lts-ocaml-4.06
   script:
-    - opam switch 4.06
-    - eval $(opam env)
     - opam install ./ocolor.opam --deps-only -t
     - dune runtest
     - opam install ./ocolor.opam
 
 ocaml-4.07:
+  image: ocaml/opam:ubuntu-lts-ocaml-4.07
   script:
-    - opam switch 4.07
-    - eval $(opam env)
     - opam install ./ocolor.opam --deps-only -t
     - dune runtest
     - opam install ./ocolor.opam
 
 ocaml-4.08:
+  image: ocaml/opam:ubuntu-lts-ocaml-4.08
   script:
-    - opam switch 4.08
-    - eval $(opam env)
     - opam install ./ocolor.opam --deps-only -t
     - dune runtest
     - opam install ./ocolor.opam
 
+ocaml-4.09:
+  image: ocaml/opam:ubuntu-lts-ocaml-4.09
+  script:
+    - opam install ./ocolor.opam --deps-only -t
+    - dune runtest
+    - opam install ./ocolor.opam
+
+ocaml-4.10:
+  image: ocaml/opam:ubuntu-lts-ocaml-4.10
+  script:
+    - opam install ./ocolor.opam --deps-only -t
+    - dune runtest
+    - opam install ./ocolor.opam
+
+ocaml-4.10:
+  image: ocaml/opam:ubuntu-lts-ocaml-4.10
+  script:
+    - opam install ./ocolor.opam --deps-only -t
+    - dune runtest
+    - opam install ./ocolor.opam
+
+ocaml-4.11:
+  image: ocaml/opam:ubuntu-lts-ocaml-4.11
+  script:
+    - opam install ./ocolor.opam --deps-only -t
+    - dune runtest
+    - opam install ./ocolor.opam
+
+ocaml-4.12:
+  image: ocaml/opam:ubuntu-lts-ocaml-4.12
+  script:
+    - opam install ./ocolor.opam --deps-only -t
+    - dune runtest
+    - opam install ./ocolor.opam
+
+ocaml-4.13:
+  image: ocaml/opam:ubuntu-lts-ocaml-4.13
+  script:
+    - opam install ./ocolor.opam --deps-only -t
+    - dune runtest
+    - opam install ./ocolor.opam
