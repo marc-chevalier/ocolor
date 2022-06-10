@@ -16,7 +16,7 @@ have?"....
 
 The general philosophy is that there must be at least what you need, but use
 with care, OColor does not detect if your terminal support what you're asking
-him. However, most terminals will simply ignore unknown sequences, so it's
+it. However, most terminals will simply ignore unknown sequences, so it's
 probably not so bad anyway. Portability is user's problem.
 
 ## About colors
