@@ -1,2 +1,2 @@
  (test (name ocolor_test)
-  (libraries str oUnit ocolor))
+  (libraries str ounit2 ocolor))

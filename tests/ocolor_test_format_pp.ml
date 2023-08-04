@@ -57,12 +57,12 @@ let _test_format_pp_option : test =
         false_string
     in
     let some_case () =
-    assert_equal
-      ~cmp:(fun x y -> String.compare x y = 0)
-      ~printer:(fun x -> x)
-      ~pp_diff:(fun fmt (a, b) -> Format.fprintf fmt "%s != %s" (make_sgr_visible a) (make_sgr_visible b))
-      (asprintf "%a" f (Some 42))
-      true_string
+      assert_equal
+        ~cmp:(fun x y -> String.compare x y = 0)
+        ~printer:(fun x -> x)
+        ~pp_diff:(fun fmt (a, b) -> Format.fprintf fmt "%s != %s" (make_sgr_visible a) (make_sgr_visible b))
+        (asprintf "%a" f (Some 42))
+        true_string
     in
     [name^"_none" >:: none_case; name^"_some" >:: some_case]
   in
@@ -145,17 +145,19 @@ let _test_format_pp_5_tuple : test =
 
 let _test_format_pp_iterable : test =
   let module StringSet = Set.Make(String) in
-  let test_cases : (string * (Format.formatter -> StringSet.t -> unit) * string) list = [
-    "default_no_style", pp_iterable_generic ~delim_style:[] ~sep_style:[] ~elem_style:[] StringSet.iter Format.pp_print_string, "[bar; baz; foo]";
+  let test_cases : (string * (Format.formatter -> StringSet.t -> unit) * string list * string) list = [
+    "no_style", pp_iterable_generic ~delim_style:[] ~sep_style:[] ~elem_style:[] StringSet.iter Format.pp_print_string, ["foo"; "bar"; "baz"], "[bar; baz; foo]";
+    "no_style_empty_without_empty", pp_iterable_generic ~delim_style:[] ~sep_style:[] ~elem_style:[] StringSet.iter Format.pp_print_string, [], "[]";
+    "no_style_empty_with_empty", pp_iterable_generic ~empty:"<empty>" ~delim_style:[] ~sep_style:[] ~elem_style:[] StringSet.iter Format.pp_print_string, [], "<empty>";
   ]
   in
-  let test (name, f, standard : string * (Format.formatter -> StringSet.t -> unit) * string) : test =
+  let test (name, f, set, standard : string * (Format.formatter -> StringSet.t -> unit) * string list * string) : test =
     let case () =
       assert_equal
         ~cmp:(fun x y -> String.compare x y = 0)
         ~printer:(fun x -> x)
         ~pp_diff:(fun fmt (a, b) -> Format.fprintf fmt "%s != %s" (make_sgr_visible a) (make_sgr_visible b))
-        (asprintf "%a" f (StringSet.of_list ["foo"; "bar"; "baz"]))
+        (asprintf "%a" f (StringSet.of_list set))
         standard
     in
     name >:: case
@@ -164,17 +166,28 @@ let _test_format_pp_iterable : test =
 
 let _test_format_pp_iterable_mapping : test =
   let module StringMap = Map.Make(String) in
-  let test_cases : (string * (Format.formatter -> int StringMap.t -> unit) * string) list = [
-    "default_no_style", pp_iterable_mapping_generic ~delim_style:[] ~sep_style:[] ~mapsto_style:[] ~key_style:[] ~value_style:[] StringMap.iter Format.pp_print_string Format.pp_print_int, "{bar:2; baz:3; foo:1}";
+  let test_cases : (string * (Format.formatter -> int StringMap.t -> unit) * (string * int) list * string) list = [
+    "no_style",
+    pp_iterable_mapping_generic ~delim_style:[] ~sep_style:[] ~mapsto_style:[] ~key_style:[] ~value_style:[] StringMap.iter Format.pp_print_string Format.pp_print_int,
+    ["foo", 1; "bar", 2; "baz", 3],
+    "{bar:2; baz:3; foo:1}";
+    "no_style_empty_without_empty",
+    pp_iterable_mapping_generic ~delim_style:[] ~sep_style:[] ~mapsto_style:[] ~key_style:[] ~value_style:[] StringMap.iter Format.pp_print_string Format.pp_print_int,
+    [],
+    "{}";
+    "no_style_empty_with_empty",
+    pp_iterable_mapping_generic ~empty:"<empty>" ~delim_style:[] ~sep_style:[] ~mapsto_style:[] ~key_style:[] ~value_style:[] StringMap.iter Format.pp_print_string Format.pp_print_int,
+    [],
+    "<empty>";
   ]
   in
-  let test (name, f, standard : string * (Format.formatter -> int StringMap.t -> unit) * string) : test =
+  let test (name, f, map, standard : string * (Format.formatter -> int StringMap.t -> unit) * (string * int) list * string) : test =
     let case () =
       assert_equal
         ~cmp:(fun x y -> String.compare x y = 0)
         ~printer:(fun x -> x)
         ~pp_diff:(fun fmt (a, b) -> Format.fprintf fmt "%s != %s" (make_sgr_visible a) (make_sgr_visible b))
-        (asprintf "%a" f (List.fold_left (fun acc (k, v) -> StringMap.add k v acc) StringMap.empty ["foo", 1; "bar", 2; "baz", 3]))
+        (asprintf "%a" f (List.fold_left (fun acc (k, v) -> StringMap.add k v acc) StringMap.empty map))
         standard
     in
     name >:: case

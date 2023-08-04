@@ -162,22 +162,42 @@ module type PRETTY_PRINTERS =
     (** Like {!pp_5_tuple_generic} with default settings *)
     val pp_5_tuple: 'a pp -> 'b pp -> 'c pp -> 'd pp -> 'e pp -> ('a * 'b * 'c * 'd * 'e) pp
 
-    (** Print an itarable set-like data structure
+    (** Print an iterable list-like or set-like data structure, that is a collection
+        with an iter function whose callback will expect one parameter.
         Default settings:
         - [left] = ["{"]
         - [sep] = ["; "]
         - [right] = ["}"]
+        - [empty]: None
         - [delim_style] = [Ocolor_types.[Faint]]
         - [sep_style] = [Ocolor_types.[Faint]]
         - [elem_style] = [[]]
+        - [empty_style] = [[]]
+
+        It expects an iter function over the collection and a (pretty) printer for
+        elements of the collection.
+
+        [delim_style] is applied to [left] and [right], [sep_style] is applied to
+        [sep] and [elem_style] is applied to each element. In particular, the pretty
+        printer will work in the context set by [elem_style], so it does not need to
+        apply the same style once again (however, it is harmless).
+
+        If [empty] is provided and the collection is empty, rather than printing
+        [left][right], [empty] will be printed instead, with style [empty_style].
+
+        Otherwise, [left] is printed, followed by the [sep]-separated list of the
+        elements on which the iter function calls its callback (in the same order),
+        followed by [right].
     *)
     val pp_iterable_generic:
       ?left:string ->
       ?sep:string ->
       ?right:string ->
+      ?empty:string ->
       ?delim_style:Ocolor_types.style list ->
       ?sep_style:Ocolor_types.style list ->
       ?elem_style:Ocolor_types.style list ->
+      ?empty_style:Ocolor_types.style list ->
       (('a -> unit) -> 'b -> unit) ->
       'a pp -> 'b pp
 
@@ -189,28 +209,35 @@ module type PRETTY_PRINTERS =
         - [left] = ["\["]
         - [sep] = ["; "]
         - [right] = ["\]"]
+        - [empty]: None
         - [delim_style] = [Ocolor_types.[Faint]]
         - [sep_style] = [Ocolor_types.[Faint]]
         - [elem_style] = [[]]
+        - [empty_style] = [[]]
 
         Moreover, it need a (pretty) printer that prints an element
 
         With default settings, if the list is empty it prints "[]". If the list
         contains only one element [a], it prints "[a]". Otherwise, elements are
-        separated by "; " without final separator, for instance "[a; b; c]"
+        separated by "; " without final separator, for instance "[a; b; c]".
 
         [delim_style] is applied to [left] and [right], [sep_style] is applied to
         [sep] and [elem_style] is applied to each element. In particular, the pretty
         printer will work in the context set by [elem_style], so it does not need to
         apply the same style once again (however, it is harmless).
+
+        If [empty] is provided and the list is empty, rather than printing
+        [left][right], [empty] will be printed instead, with style [empty_style].
     *)
     val pp_list_generic:
       ?left:string ->
       ?sep:string ->
       ?right:string ->
+      ?empty:string ->
       ?delim_style:Ocolor_types.style list ->
       ?sep_style:Ocolor_types.style list ->
       ?elem_style:Ocolor_types.style list ->
+      ?empty_style:Ocolor_types.style list ->
       'a pp -> 'a list pp
 
     (** Like {!pp_list_generic} with default settings *)
@@ -222,9 +249,11 @@ module type PRETTY_PRINTERS =
         - [left] = ["\["]
         - [sep] = ["; "]
         - [right] = ["\]"]
+        - [empty]: None
         - [delim_style] = [Ocolor_types.[Faint]]
         - [sep_style] = [Ocolor_types.[Faint]]
         - [elem_style] = [[]]
+        - [empty_style] = [[]]
 
         Moreover, it need a (pretty) printer that prints an element
 
@@ -236,63 +265,95 @@ module type PRETTY_PRINTERS =
         [sep] and [elem_style] is applied to each element. In particular, the pretty
         printer will work in the context set by [elem_style], so it does not need to
         apply the same style once again (however, it is harmless).
+
+        If [empty] is provided and the array is empty, rather than printing
+        [left][right], [empty] will be printed instead, with style [empty_style].
     *)
     val pp_array_generic:
       ?left:string ->
       ?sep:string ->
       ?right:string ->
+      ?empty:string ->
       ?delim_style:Ocolor_types.style list ->
       ?sep_style:Ocolor_types.style list ->
       ?elem_style:Ocolor_types.style list ->
+      ?empty_style:Ocolor_types.style list ->
       'a pp -> 'a array pp
 
     (** Like {!pp_array_generic} with default settings *)
     val pp_array: 'a pp -> 'a array pp
 
-    (** Print an itarable map-like data structure
+    (** Print an iterable map-like data structure, that is a collection
+        with an iter function whose callback will expect two parameters.
         Default settings:
         - [left] = ["{"]
         - [sep] = ["; "]
         - [right] = ["}"]
+        - [empty]: None
         - [delim_style] = [Ocolor_types.[Faint]]
         - [sep_style] = [Ocolor_types.[Faint]]
+        - [empty_style] = [[]]
+
+        It expects an iter function over the collection and a (pretty) printer for
+        key-value pairs of the collection.
+
+        [delim_style] is applied to [left] and [right] and [sep_style] is applied
+        to [sep].
+
+        If [empty] is provided and the collection is empty, rather than printing
+        [left][right], [empty] will be printed instead, with style [empty_style].
+
+        Otherwise, [left] is printed, followed by the [sep]-separated list of the
+        elements on which the iter function calls its callback (in the same order),
+        followed by [right].
     *)
     val pp_iterable_mapping_more_generic :
       ?left:string ->
       ?sep:string ->
       ?right:string ->
+      ?empty:string ->
       ?delim_style:Ocolor_types.style list ->
       ?sep_style:Ocolor_types.style list ->
+      ?empty_style:Ocolor_types.style list ->
       (('a -> 'b -> unit) -> 'c -> unit) ->
       ('a * 'b) pp -> 'c pp
 
-    (** Print an itarable map-like data structure as a sequence of
-        <key><mapsto><value> separeted by <sep>.
+    (** Print an iterable map-like data structure as a sequence of
+        <key><mapsto><value> separated by <sep>.
         Default settings:
         - [left] = ["{"]
         - [sep] = ["; "]
         - [right] = ["}"]
         - [mapsto] = [":"]
+        - [empty]: None
         - [delim_style] = [Ocolor_types.[Faint]]
         - [sep_style] = [Ocolor_types.[Faint]]
         - [mapsto_style] = [Ocolor_types.[Faint]]
         - [key_style] = [[]]
         - [value_style] = [[]]
+        - [empty_style] = [[]]
+
+        It expects an iter function over the collection, a (pretty) printer for keys
+        and a (pretty) printer for values of the collection.
+
+        See {!pp_iterable_mapping_more_generic} for more details.
     *)
     val pp_iterable_mapping_generic :
       ?left:string ->
       ?sep:string ->
       ?right:string ->
       ?mapsto:string ->
+      ?empty:string ->
       ?delim_style:Ocolor_types.style list ->
       ?sep_style:Ocolor_types.style list ->
       ?mapsto_style:Ocolor_types.style list ->
       ?key_style:Ocolor_types.style list ->
       ?value_style:Ocolor_types.style list ->
+      ?empty_style:Ocolor_types.style list ->
       (('a -> 'b -> unit) -> 'c -> unit) ->
       'a pp -> 'b pp -> 'c pp
 
-    (** Default version of pp_iterable_mapping_generic *)
+    (** Default version of {!pp_iterable_mapping_generic} *)
     val pp_iterable_mapping :
       (('a -> 'b -> unit) -> 'c -> unit) ->
       'a pp -> 'b pp -> 'c pp

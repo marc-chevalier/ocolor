@@ -91,3 +91,10 @@ ocaml-4.13:
     - opam install ./ocolor.opam --deps-only -t
     - dune runtest
     - opam install ./ocolor.opam
+
+ocaml-4.14:
+  image: ocaml/opam:ubuntu-lts-ocaml-4.14
+  script:
+    - opam install ./ocolor.opam --deps-only -t
+    - dune runtest
+    - opam install ./ocolor.opam

@@ -101,9 +101,11 @@ module type PRETTY_PRINTERS =
       ?left:string ->
       ?sep:string ->
       ?right:string ->
+      ?empty:string ->
       ?delim_style:Ocolor_types.style list ->
       ?sep_style:Ocolor_types.style list ->
       ?elem_style:Ocolor_types.style list ->
+      ?empty_style:Ocolor_types.style list ->
       (('a -> unit) -> 'b -> unit) ->
       'a pp -> 'b pp
     val pp_iterable: (('a -> unit) -> 'b -> unit) -> 'a pp -> 'b pp
@@ -112,9 +114,11 @@ module type PRETTY_PRINTERS =
       ?left:string ->
       ?sep:string ->
       ?right:string ->
+      ?empty:string ->
       ?delim_style:Ocolor_types.style list ->
       ?sep_style:Ocolor_types.style list ->
       ?elem_style:Ocolor_types.style list ->
+      ?empty_style:Ocolor_types.style list ->
       'a pp -> 'a list pp
     val pp_list: 'a pp -> 'a list pp
 
@@ -122,9 +126,11 @@ module type PRETTY_PRINTERS =
       ?left:string ->
       ?sep:string ->
       ?right:string ->
+      ?empty:string ->
       ?delim_style:Ocolor_types.style list ->
       ?sep_style:Ocolor_types.style list ->
       ?elem_style:Ocolor_types.style list ->
+      ?empty_style:Ocolor_types.style list ->
       'a pp -> 'a array pp
     val pp_array: 'a pp -> 'a array pp
 
@@ -132,8 +138,10 @@ module type PRETTY_PRINTERS =
       ?left:string ->
       ?sep:string ->
       ?right:string ->
+      ?empty:string ->
       ?delim_style:Ocolor_types.style list ->
       ?sep_style:Ocolor_types.style list ->
+      ?empty_style:Ocolor_types.style list ->
       (('a -> 'b -> unit) -> 'c -> unit) ->
       ('a * 'b) pp -> 'c pp
     val pp_iterable_mapping_generic :
@@ -141,11 +149,13 @@ module type PRETTY_PRINTERS =
       ?sep:string ->
       ?right:string ->
       ?mapsto:string ->
+      ?empty:string ->
       ?delim_style:Ocolor_types.style list ->
       ?sep_style:Ocolor_types.style list ->
       ?mapsto_style:Ocolor_types.style list ->
       ?key_style:Ocolor_types.style list ->
       ?value_style:Ocolor_types.style list ->
+      ?empty_style:Ocolor_types.style list ->
       (('a -> 'b -> unit) -> 'c -> unit) ->
       'a pp -> 'b pp -> 'c pp
     val pp_iterable_mapping :
@@ -415,15 +425,18 @@ module BuildPrettyPrinters
     let pp_iterable_generic
         (type value) (type t)
         ?(left: string="[") ?(sep: string="; ") ?(right: string="]")
+        ?(empty: string option)
         ?(delim_style: Ocolor_types.style list=Ocolor_types.[Faint])
         ?(sep_style: Ocolor_types.style list=Ocolor_types.[Faint])
         ?(elem_style: Ocolor_types.style list=[])
+        ?(empty_style: Ocolor_types.style list=[])
         (iter: (value -> unit) -> t -> unit)
         (p: value pp)
         (fmt: formatter)
         (x: t)
       : unit =
-      let () = fprintf fmt "%a%s%a" pp_open_styles delim_style left pp_close_styles () in
+      let left (fmt: formatter) : unit = fprintf fmt "%a%s%a" pp_open_styles delim_style left pp_close_styles () in
+      let right (fmt: formatter) : unit = fprintf fmt "%a%s%a" pp_open_styles delim_style right pp_close_styles () in
       let first = ref true in
       let sep (fmt: formatter) : unit =
         fprintf fmt "%a%s%a"
@@ -437,6 +450,7 @@ module BuildPrettyPrinters
         iter
           (fun v ->
              if !first then
+               let () = left fmt in
                first := false
              else
                sep fmt;
@@ -444,8 +458,10 @@ module BuildPrettyPrinters
           )
           x
       in
-      let () = fprintf fmt "%a%s%a" pp_open_styles delim_style right pp_close_styles () in
-      ()
+      match !first, empty with
+      | true, Some empty -> fprintf fmt "%a%s%a" pp_open_styles empty_style empty pp_close_styles ()
+      | true, None -> left fmt; right fmt
+      | false, _ -> right fmt
 
     let pp_iterable (type value) (type t)
         (iter: (value -> unit) -> t -> unit)
@@ -457,14 +473,16 @@ module BuildPrettyPrinters
 
     let pp_list_generic
         ?(left: string="[") ?(sep: string="; ") ?(right: string="]")
+        ?(empty: string option)
         ?(delim_style: Ocolor_types.style list=Ocolor_types.[Faint])
         ?(sep_style: Ocolor_types.style list=Ocolor_types.[Faint])
         ?(elem_style: Ocolor_types.style list=[])
+        ?(empty_style: Ocolor_types.style list=[])
         (type a)
         (p: a pp) (fmt: formatter) (l: a list)
       : unit =
-      pp_iterable_generic ~left ~sep ~right
-        ~delim_style ~sep_style ~elem_style
+      pp_iterable_generic ~left ~sep ~right ?empty
+        ~delim_style ~sep_style ~elem_style ~empty_style
         List.iter p fmt l
 
     let pp_list (type a) (p: a pp)
@@ -474,14 +492,16 @@ module BuildPrettyPrinters
 
     let pp_array_generic
         ?(left: string="[") ?(sep: string="; ") ?(right: string="]")
+        ?(empty: string option)
         ?(delim_style: Ocolor_types.style list=Ocolor_types.[Faint])
         ?(sep_style: Ocolor_types.style list=Ocolor_types.[Faint])
         ?(elem_style: Ocolor_types.style list=[])
+        ?(empty_style: Ocolor_types.style list=[])
         (type a)
         (p: a pp) (fmt: formatter) (l: a array)
       : unit =
-      pp_iterable_generic ~left ~sep ~right
-        ~delim_style ~sep_style ~elem_style
+      pp_iterable_generic ~left ~sep ~right ?empty
+        ~delim_style ~sep_style ~elem_style ~empty_style
         Array.iter p fmt l
 
     let pp_array (type a) (p: a pp)
@@ -492,14 +512,17 @@ module BuildPrettyPrinters
     let pp_iterable_mapping_more_generic
         (type key) (type value) (type t)
         ?(left: string="{") ?(sep: string="; ") ?(right: string="}")
+        ?(empty: string option)
         ?(delim_style: Ocolor_types.style list=Ocolor_types.[Faint])
         ?(sep_style: Ocolor_types.style list=Ocolor_types.[Faint])
+        ?(empty_style: Ocolor_types.style list=[])
         (iter: (key -> value -> unit) -> t -> unit)
         (p: (key * value) pp)
         (fmt: formatter)
         (x: t)
       : unit =
-      let () = fprintf fmt "%a%s%a" pp_open_styles delim_style left pp_close_styles () in
+      let left (fmt: formatter) : unit = fprintf fmt "%a%s%a" pp_open_styles delim_style left pp_close_styles () in
+      let right (fmt: formatter) : unit = fprintf fmt "%a%s%a" pp_open_styles delim_style right pp_close_styles () in
       let first = ref true in
       let sep (fmt: formatter) : unit =
         fprintf fmt "%a%s%a"
@@ -509,6 +532,7 @@ module BuildPrettyPrinters
         iter
           (fun k v ->
              if !first then
+               let () = left fmt in
                first := false
              else
                sep fmt;
@@ -516,18 +540,22 @@ module BuildPrettyPrinters
           )
           x
       in
-      let () = fprintf fmt "%a%s%a" pp_open_styles delim_style right pp_close_styles () in
-      ()
+      match !first, empty with
+      | true, Some empty -> fprintf fmt "%a%s%a" pp_open_styles empty_style empty pp_close_styles ()
+      | true, None -> left fmt; right fmt
+      | false, _ -> right fmt
 
     let pp_iterable_mapping_generic
         (type key) (type value) (type t)
         ?(left: string="{") ?(sep: string="; ") ?(right: string="}")
         ?(mapsto: string=":")
+        ?(empty: string option)
         ?(delim_style: Ocolor_types.style list=Ocolor_types.[Faint])
         ?(sep_style: Ocolor_types.style list=Ocolor_types.[Faint])
         ?(mapsto_style: Ocolor_types.style list=Ocolor_types.[Faint])
         ?(key_style: Ocolor_types.style list=[])
         ?(value_style: Ocolor_types.style list=[])
+        ?(empty_style: Ocolor_types.style list=[])
         (iter: (key -> value -> unit) -> t -> unit)
         (pk: key pp)
         (pv: value pp)
@@ -549,8 +577,8 @@ module BuildPrettyPrinters
       let p (fmt: formatter) (k, v: key * value) : unit =
         fprintf fmt "%a%t%a" key k mapsto value v
       in
-      pp_iterable_mapping_more_generic ~left ~right ~sep
-        ~delim_style ~sep_style iter p fmt x
+      pp_iterable_mapping_more_generic ~left ~right ~sep ?empty
+        ~delim_style ~sep_style ~empty_style iter p fmt x
 
     let pp_iterable_mapping
         (type key) (type value) (type t)
