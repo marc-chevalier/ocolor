@@ -1,6 +1,6 @@
 opam-version: "2.0"
 name: "ocolor"
-version: "1.3.0"
+version: "1.3.1"
 synopsis: "Print with style in your terminal using Format's semantic tags"
 maintainer: "Marc Chevalier <ocolor@marc-chevalier.com>"
 authors: "Marc Chevalier <ocolor@marc-chevalier.com>"
@@ -8,7 +8,7 @@ depends: [
   "ocaml" {>= "4.02.3"}
   "dune" {>= "1.6.3"}
   "cppo" {build & >= "1.6.5"}
-  "ounit" {with-test & >= "2.0.8"}
+  "ounit2" {with-test & >= "2.0.8"}
 ]
 build: [
   ["dune" "build" "-p" name "-j" jobs]
