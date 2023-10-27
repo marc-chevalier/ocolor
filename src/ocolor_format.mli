@@ -35,9 +35,13 @@
       as 8-bits colors.
     - a X11 color name (just as in [X11/rgb.txt]). In this case, it may constain
       spaces (for instance [Dark Magenta])
-    - a X11 color name prefixed by [x11_]. Useful to disambiguate with standard
-      colors. For instance [green] is a standard 4-bits color, but [x11_green]
-      is the x11 color.
+    - a X11 color name prefixed by [x11_] or [x11:]. Useful to disambiguate with
+      standard colors. For instance [green] is a standard 4-bits color, but
+      [x11_green] is the x11 color.
+    - a CSS level 4 color name prefixed by [css_] or [css:].
+    - a XTerm color name prefixed by [xterm_] or [xterm:], case-insensitive.
+    - a XTerm color id prefixed by [xterm_] or [xterm:]. The id can be in
+      hexadecimal notation.
     - a color prefixed by [bg_] to apply this color on the background. For
       instance [bg_green], [bg_hi_green], [bg_x11_green], [bg_gs(12)],
       [bg_rgb(1,2,3)].

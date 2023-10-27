@@ -1,4 +1,4 @@
-(** X11 colors *)
+(** CSS level 4 colors *)
 
 (** Get the color code (24 bits) of the given name. [None] if it does not
     exist.

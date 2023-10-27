@@ -126,8 +126,23 @@ module MakeCounter(P: COUNTER_PARAMETERS) : STACK with type elem = unit =
         None
   end)
 
-let color_of_string (s: string) : Ocolor_types.color option =
+let x11_color_of_string (s: string) : Ocolor_types.color option =
   match Ocolor_x11.color_of_string s with
+  | None -> None
+  | Some (r24, g24, b24) -> Some Ocolor_types.(C24 {r24; g24; b24})
+
+let css_color_of_string (s: string) : Ocolor_types.color option =
+  match Ocolor_css.color_of_string s with
+  | None -> None
+  | Some (r24, g24, b24) -> Some Ocolor_types.(C24 {r24; g24; b24})
+
+let xterm_color_of_string (s: string) : Ocolor_types.color option =
+  match Ocolor_xterm.color_of_string s with
+  | None -> None
+  | Some (r24, g24, b24) -> Some Ocolor_types.(C24 {r24; g24; b24})
+
+let xterm_color_of_id (id: int) : Ocolor_types.color option =
+  match Ocolor_xterm.color_of_id id with
   | None -> None
   | Some (r24, g24, b24) -> Some Ocolor_types.(C24 {r24; g24; b24})
 
@@ -150,24 +165,59 @@ let analyze_fg (s: string) : Ocolor_types.color option =
   | "hi_cyan" -> Some Ocolor_types.(C4 hi_cyan)
   | "hi_white" -> Some Ocolor_types.(C4 hi_white)
   | _ ->
-    match color_of_string s with
+    match x11_color_of_string s with
     | Some c -> Some c
     | None ->
-      try
-        Scanf.sscanf s "x11_%s" (fun s -> color_of_string s)
-      with Scanf.Scan_failure _ | End_of_file | Failure _ | Invalid_argument _ ->
-      try
-        Scanf.sscanf s "c6(%d,%d,%d)" (fun r6 g6 b6 -> Some Ocolor_types.(C8 (Cube6 {r6;g6;b6})))
-      with Scanf.Scan_failure _ | End_of_file | Failure _ | Invalid_argument _ ->
-      try
-        Scanf.sscanf s "gs(%d)" (fun gs -> Some Ocolor_types.(C8 (Grayscale gs)))
-      with Scanf.Scan_failure _ | End_of_file | Failure _ | Invalid_argument _ ->
-      try
-        Scanf.sscanf s "rgb(%d,%d,%d)" (fun r24 g24 b24 -> Some Ocolor_types.(C24 {r24;g24;b24}))
-      with Scanf.Scan_failure _ | End_of_file | Failure _ | Invalid_argument _ ->
-      try
-        Scanf.sscanf s "rgb(0x%x,0x%x,0x%x)" (fun r24 g24 b24 -> Some Ocolor_types.(C24 {r24;g24;b24}))
-      with Scanf.Scan_failure _ | End_of_file | Failure _ | Invalid_argument _ -> None
+      let parsers : (string -> Ocolor_types.color option) list = [
+        (fun s -> Scanf.sscanf s "x11_%s" x11_color_of_string);
+        (fun s -> Scanf.sscanf s "x11:%s" x11_color_of_string);
+        (fun s -> Scanf.sscanf s "css_%s" css_color_of_string);
+        (fun s -> Scanf.sscanf s "css:%s" css_color_of_string);
+        (fun s -> Scanf.sscanf s "xterm_0x%x" xterm_color_of_id);
+        (fun s -> Scanf.sscanf s "xterm:0x%x" xterm_color_of_id);
+        (fun s -> Scanf.sscanf s "xterm_%d" xterm_color_of_id);
+        (fun s -> Scanf.sscanf s "xterm:%d" xterm_color_of_id);
+        (fun s -> Scanf.sscanf s "xterm_%s" xterm_color_of_string);
+        (fun s -> Scanf.sscanf s "xterm:%s" xterm_color_of_string);
+        (fun s -> Scanf.sscanf s "c6(%d, %d, %d)"
+          (fun r6 g6 b6 ->
+            if 0 <= r6 && r6 < 6 && 0 <= g6 && g6 < 6 && 0 <= b6 && b6 < 6
+            then Some Ocolor_types.(C8 (Cube6 {r6;g6;b6}))
+            else None
+          )
+        );
+        (fun s -> Scanf.sscanf s "gs(%d)"
+          (fun gs ->
+            if 0 <= gs && gs < 24
+            then Some Ocolor_types.(C8 (Grayscale gs))
+            else None
+          )
+        );
+        (fun s -> Scanf.sscanf s "rgb(%d, %d, %d)"
+          (fun r24 g24 b24 ->
+            if 0 <= r24 && r24 < 256 && 0 <= g24 && g24 < 256 && 0 <= b24 && b24 < 256
+            then Some Ocolor_types.(C24 {r24;g24;b24})
+            else None
+          )
+        );
+        (fun s -> Scanf.sscanf s "rgb(0x%x, 0x%x, 0x%x)"
+          (fun r24 g24 b24 ->
+            if 0 <= r24 && r24 < 256 && 0 <= g24 && g24 < 256 && 0 <= b24 && b24 < 256
+            then Some Ocolor_types.(C24 {r24;g24;b24})
+            else None
+          )
+        )
+      ]
+      in
+      let rec loop parsers =
+        match parsers with
+        | [] -> None
+        | t::q ->
+          try
+            t s
+          with Scanf.Scan_failure _ | End_of_file | Failure _ | Invalid_argument _ -> loop q
+      in
+      loop parsers
 
 let analyze_style_fg (style: Ocolor_types.style) : Ocolor_types.color option =
   (match style with
